@@ -1362,7 +1362,7 @@ input[type=text],input[type=file],input[type=url],textarea{width:100%;background
             <div class="brand">
             <span class="logo">CSEC</span>
             <span class="title">Shell</span>
-            <span class="ver">v0.6</span>
+            <span class="ver">v0.7</span>
             </div>
 
             <!-- opsional info ringkas (bisa dihapus kalau penuh) -->
@@ -1988,4 +1988,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </body>
+
 </html>
